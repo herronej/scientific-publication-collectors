@@ -1,4 +1,4 @@
-# scitext-collectors
+# Scientific Publication Collection
 
 A collection of tools and methods for downloading full-text scientific publications from various sources.
 
