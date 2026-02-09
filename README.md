@@ -26,17 +26,55 @@ scitext-collectors/
 └── LICENSE
 ```
 
-## Contributing
+## Usage
 
-To add a new collection method:
+### arxiv-downloader
 
-1. Create a new directory under `methods/` with a descriptive name.
-2. Include a `README.md` with usage instructions, expected inputs/outputs, and any rate-limiting or legal considerations.
-3. Include a `requirements.txt` (or equivalent dependency file).
-4. Open a pull request describing the source and method.
+Fetch paper metadata and download full-text PDFs from ArXiv by category and date range.
 
-## License
+**Install dependencies:**
 
-This project is licensed under the MIT License. See [LICENSE](LICENSE) for details.
+```bash
+cd methods/arxiv-downloader
+pip install -r requirements.txt
+```
 
-> **Note:** Respect the terms of service of each data source. ArXiv's API has rate limits—please do not overwhelm their servers. See individual method READMEs for source-specific guidelines.
+**Step 1 — Fetch metadata:**
+
+```bash
+python fetch_arxiv.py \
+    --category cond-mat.mtrl-sci \
+    --start-date 2024-01-01 \
+    --end-date 2024-01-31 \
+    --output papers.jsonl
+```
+
+This queries the ArXiv API day-by-day and writes one JSON record per paper (title, authors, abstract, categories, URLs) to a JSONL file.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--category` | `cond-mat.mtrl-sci` | ArXiv category to query |
+| `--start-date` | *(required)* | Start date (`YYYY-MM-DD`) |
+| `--end-date` | today | End date (`YYYY-MM-DD`) |
+| `--days` | — | Alternative to `--end-date`: number of days from start |
+| `--output` | `feed_output.jsonl` | Output JSONL path |
+| `--max-results` | `1000` | Max results per day |
+
+**Step 2 — Download PDFs:**
+
+```bash
+python download_pdfs.py \
+    --input papers.jsonl \
+    --output-dir ./pdfs
+```
+
+Downloads PDFs for every paper in the JSONL file. Progress is checkpointed automatically, so interrupted runs resume where they left off.
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `--input` | *(required)* | Input JSONL file from Step 1 |
+| `--output-dir` | `./pdfs` | Directory to save downloaded PDFs |
+| `--checkpoint` | `pdf_downloader_checkpoint.json` | Checkpoint file for resuming |
+| `--start-index` | — | Override checkpoint; start from this index |
+
+> **Rate limiting:** ArXiv asks that automated requests be spaced at least 3 seconds apart. The fetch script queries one day at a time, which provides natural pacing. See ArXiv's [API terms of use](https://info.arxiv.org/help/api/tou.html).
